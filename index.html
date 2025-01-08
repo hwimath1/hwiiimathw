@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>곱셈공식의 변형</title>
+  <!-- MathJax 로드 (LaTeX 수식 렌더링) -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      padding: 0;
+      background: #f9f9f9;
+    }
+    h1, h2, h3 {
+      text-align: center;
+    }
+    #container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    .center {
+      text-align: center;
+    }
+    .energy-bar {
+      width: 200px;
+      height: 20px;
+      background-color: #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 0 auto 10px auto;
+    }
+    .energy-fill {
+      height: 20px;
+      background-color: #00a8f3;
+      width: 100%;
+      transition: width 0.5s linear;
+    }
+    .hidden {
+      display: none;
+    }
+    .options button {
+      display: block;
+      margin: 5px 0;
+    }
+    .difficulty-btn {
+      margin: 5px;
+    }
+    .life {
+      font-weight: bold;
+      color: #ff3333;
+    }
+    #nameInput {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #response {
+      white-space: pre-wrap;
+      background: #f0f0f0;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+<div id="container">
+  <h1>곱셈공식의 변형</h1>
+  <!-- 이름 입력 화면 -->
+  <div id="nameScreen">
+    <div style="text-align:center;">
+      <label for="playerName">이름을 입력하세요: </label>
+      <input type="text" id="playerName" />
+    </div>
+    <div class="center" style="margin-top:20px;">
+      <button id="goDifficulty">다음</button>
+    </div>
+  </div>
+
+  <!-- 난이도 선택 화면 -->
+  <div id="difficultyScreen" class="hidden">
+    <h2>난이도를 선택하세요</h2>
+    <div class="center">
+      <button class="difficulty-btn" data-level="최상">최상 (20초 시작 / 문제당 20점)</button>
+      <button class="difficulty-btn" data-level="상">상 (30초 시작 / 문제당 15점)</button>
+      <button class="difficulty-btn" data-level="중">중 (40초 시작 / 문제당 13점)</button>
+      <button class="difficulty-btn" data-level="하">하 (시간제한 없음 / 문제당 10점)</button>
+    </div>
+  </div>
+
+  <!-- 퀴즈 화면 -->
+  <div id="quizScreen" class="hidden">
+    <div class="center">
+      <div>
+        <span>남은 기회: <span id="lifeCount" class="life">3</span></span> &nbsp;|&nbsp;
+        <span>점수: <span id="scoreDisplay">0</span></span> &nbsp;|&nbsp;
+        <span>전체 경과시간: <span id="totalTime">0</span>s</span>
+      </div>
+      <!-- 에너지바(개별 문제 타이머) -->
+      <div class="energy-bar">
+        <div id="energyFill" class="energy-fill"></div>
+      </div>
+      <h3 id="questionText"></h3>
+      <div id="options" class="options"></div>
+      <div id="explanation" style="margin-top:10px; color:#444;"></div>
+    </div>
+  </div>
+
+  <!-- 게임오버 화면 -->
+  <div id="gameOverScreen" class="hidden center">
+    <h2>게임 종료</h2>
+    <p>최종 점수: <span id="finalScore">0</span></p>
+    <!-- 점수 전송 -->
+    <button id="sendScoreBtn">점수 전송</button>
+    <div id="response"></div>
+  </div>
+</div>
+
+<script>
+  // MathJax가 동적으로 생성되는 요소를 렌더링하도록 하는 함수
+  function renderMath() {
+    if (window.MathJax) {
+      MathJax.typeset();
+    }
+  }
+
+  // -----------------------------
+  // 문제 데이터 (하나도 빠짐없이 53문제를 전부 포함)
+  // -----------------------------
+  // 각 문제는 { statement: "...", choices: ["...","...",...], correct: index(0~3) } 구조
+  // '조건' 등도 statement에 함께 서술하고, 보기(choices) 중 하나가 정답.
+  // 중복 답안이 없도록 정리하며, 해설상의 '정답'은 correct로 지정.
+
+  // 주의: 매우 길기 때문에 문제별로 주석 처리
+
+  const allQuestions = [
+
+    // ---------------------------
+    // [1~4번 문제]
+    // ---------------------------
+    {
+      statement: "\\(a=2+\\sqrt{3}, b=2-\\sqrt{3}\\) 일 때, " +
+                 "\\(\\dfrac{b^2}{a} + \\dfrac{a^2}{b}\\) 의 값을 구하시오.",
+      choices: [
+        "50",
+        "52",   // 정답
+        "54",
+        "56"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a=\\sqrt{3}+1, b=\\sqrt{3}-1\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 의 값을 구하시오.",
+      choices: [
+        "\\(8\\sqrt{3}\\)",
+        "\\(12\\sqrt{3}\\)",  // 정답
+        "\\(14\\sqrt{3}\\)",
+        "\\(16\\sqrt{3}\\)"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a=\\sqrt{5}+2, b=\\sqrt{5}-2\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 의 값을 구하시오.",
+      choices: [
+        "74",
+        "76",   // 정답
+        "78",
+        "80"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a=1+\\sqrt{2}, b=1-\\sqrt{2}\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 의 값을 구하시오.",
+      choices: [
+        "\\(8\\sqrt{2}\\)",
+        "\\(10\\sqrt{2}\\)",  // 정답
+        "\\(12\\sqrt{2}\\)",
+        "\\(16\\sqrt{2}\\)"
+      ],
+      correct: 1
+    },
+
+    // ---------------------------
+    // [7~13번 문제]
+    // ---------------------------
+    {
+      statement: "\\(a-b=-2,\\ ab=3\\) 일 때, \\(a^2 + b^2\\) 의 값을 구하시오.",
+      choices: [
+        "8",
+        "9",
+        "10",  // 정답
+        "12"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a-b=5,\\ ab=2\\) 일 때, \\(a^2 + b^2\\) 의 값을 구하시오.",
+      choices: [
+        "27",
+        "29",  // 정답
+        "31",
+        "35"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+b=6,\\ ab=3\\) 일 때, \\(a^2 + b^2\\) 의 값을 구하시오.",
+      choices: [
+        "26",
+        "28",
+        "30",  // 정답
+        "36"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b=-3,\\ ab=2\\) 일 때, \\(a^2 + b^2\\) 의 값을 구하시오.",
+      choices: [
+        "3",
+        "4",
+        "5",   // 정답
+        "9"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a-b=3,\\ ab=2\\) 일 때, \\(a^2 + b^2\\) 의 값을 구하시오.",
+      choices: [
+        "10",
+        "11",
+        "13",  // 정답
+        "15"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b=2,\\ ab=-1\\) 일 때, \\(a^2 + b^2\\) 의 값을 구하시오.",
+      choices: [
+        "4",
+        "5",
+        "6",   // 정답
+        "7"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b=3,\\ ab=-10\\) 일 때, \\(a^2 + b^2\\) 의 값을 구하시오.",
+      choices: [
+        "25",
+        "27",
+        "29",  // 정답
+        "35"
+      ],
+      correct: 2
+    },
+
+    // ---------------------------
+    // [15~21번 문제]
+    // ---------------------------
+    {
+      statement: "\\(a=\\sqrt{3}+1, b=\\sqrt{3}-1\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 을 구하시오.",
+      choices: [
+        "\\(10\\sqrt{3}\\)",
+        "\\(12\\sqrt{3}\\)",  // 정답
+        "\\(14\\sqrt{3}\\)",
+        "\\(16\\sqrt{3}\\)"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a=\\sqrt{2}+2, b=\\sqrt{2}-2\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 을 구하시오.",
+      choices: [
+        "\\(26\\sqrt{2}\\)",
+        "\\(28\\sqrt{2}\\)",  // 정답
+        "\\(30\\sqrt{2}\\)",
+        "\\(32\\sqrt{2}\\)"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a=2+\\sqrt{3}, b=2-\\sqrt{3}\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 을 구하시오.",
+      choices: [
+        "50",
+        "52",  // 정답
+        "54",
+        "60"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+b=1,\\ ab=-2\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 을 구하시오.",
+      choices: [
+        "5",
+        "6",
+        "7",   // 정답
+        "9"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b=5,\\ ab=3\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 을 구하시오.",
+      choices: [
+        "72",
+        "78",
+        "80",  // 정답
+        "84"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b=-4,\\ ab=-5\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 을 구하시오.",
+      choices: [
+        "-120",
+        "-124",  // 정답
+        "-125",
+        "-128"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+b=3,\\ ab=-2\\) 일 때, " +
+                 "\\(a^3 + b^3\\) 을 구하시오.",
+      choices: [
+        "43",
+        "45",   // 정답
+        "46",
+        "49"
+      ],
+      correct: 1
+    },
+
+    // ---------------------------
+    // [29~35번 문제]
+    // ---------------------------
+    {
+      statement: "\\(a=-1+\\sqrt{2}, b=-1-\\sqrt{2}\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 을 구하시오.",
+      choices: [
+        "\\(8\\sqrt{2}\\)",
+        "\\(10\\sqrt{2}\\)", // 정답
+        "\\(12\\sqrt{2}\\)",
+        "\\(14\\sqrt{2}\\)"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a=\\sqrt{3}+1, b=\\sqrt{3}-1\\) 이고 " +
+                 "\\(a-b=2, ab=2\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 을 구하시오.",
+      choices: [
+        "18",
+        "20",  // 정답
+        "24",
+        "28"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a-b=-1, ab=-5\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 을 구하시오.",
+      choices: [
+        "14",  // 정답
+        "16",
+        "18",
+        "20"
+      ],
+      correct: 0
+    },
+    {
+      statement: "\\(a-b=-4, ab=3\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 을 구하시오.",
+      choices: [
+        "-96",
+        "-98",
+        "-100", // 정답
+        "-104"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a-b=3, ab=-2\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 을 구하시오.",
+      choices: [
+        "7",
+        "8",
+        "9",   // 정답
+        "10"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a-b=-4, ab=-5\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 을 구하시오.",
+      choices: [
+        "-8",
+        "-6",
+        "-4",  // 정답
+        "0"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a-b=3, ab=1\\) 일 때, " +
+                 "\\(a^3 - b^3\\) 을 구하시오.",
+      choices: [
+        "32",
+        "34",
+        "36",  // 정답
+        "40"
+      ],
+      correct: 2
+    },
+
+    // ---------------------------
+    // [42~45번 문제]
+    // ---------------------------
+    {
+      statement: "\\(a+b+c = \\sqrt{6},\\ ab+bc+ca = 2\\) 일 때, " +
+                 "\\(a^2 + b^2 + c^2\\) 의 값을 구하시오.",
+      choices: [
+        "1",
+        "2",    // 정답
+        "3",
+        "4"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+b+c = 3,\\ ab+bc+ca = -1\\) 일 때, " +
+                 "\\(a^2 + b^2 + c^2\\) 의 값을 구하시오.",
+      choices: [
+        "9",
+        "10",
+        "11",   // 정답
+        "13"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b+c = 9,\\ ab+bc+ca = 8\\) 일 때, " +
+                 "\\(a^2 + b^2 + c^2\\) 의 값을 구하시오.",
+      choices: [
+        "63",
+        "64",
+        "65",   // 정답
+        "70"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b+c = -2,\\ ab+bc+ca = -1\\) 일 때, " +
+                 "\\(a^2 + b^2 + c^2\\) 의 값을 구하시오.",
+      choices: [
+        "4",
+        "6",    // 정답
+        "7",
+        "8"
+      ],
+      correct: 1
+    },
+
+    // ---------------------------
+    // [50~54번 문제]
+    // ---------------------------
+    {
+      statement: "\\(a+b+c=3,\\ ab+bc+ca=2,\\ abc=-3\\) 일 때, " +
+                 "\\(a^3 + b^3 + c^3\\) 을 구하시오.",
+      choices: [
+        "-3",
+        "0",   // 정답
+        "3",
+        "6"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+b+c=4,\\ ab+bc+ca=1,\\ abc=-6\\) 일 때, " +
+                 "\\(a^3 + b^3 + c^3\\) 을 구하시오.",
+      choices: [
+        "30",
+        "32",
+        "34",  // 정답
+        "36"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+b+c=2,\\ a^2+b^2+c^2=6,\\ abc=-2\\) 일 때, " +
+                 "\\(a^3 + b^3 + c^3\\) 을 구하시오.",
+      choices: [
+        "6",
+        "8",   // 정답
+        "10",
+        "12"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+b+c=5,\\ a^2+b^2+c^2=11,\\ abc=4\\) 일 때, " +
+                 "\\(a^3 + b^3 + c^3\\) 을 구하시오.",
+      choices: [
+        "30",
+        "32",  // 정답
+        "34",
+        "40"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+b+c=2,\\ a^2+b^2+c^2=12,\\ abc=2\\) 일 때, " +
+                 "\\(a^3 + b^3 + c^3\\) 을 구하시오.",
+      choices: [
+        "34",
+        "36",
+        "38",  // 정답
+        "40"
+      ],
+      correct: 2
+    },
+
+    // ---------------------------
+    // [55번: 소문제 3개]
+    // ---------------------------
+    {
+      statement: "\\(x+\\dfrac{1}{x}=3\\) 일 때, " +
+                 "\\(x^2 + \\dfrac{1}{x^2}\\) 의 값을 구하시오.",
+      choices: [
+        "5",
+        "7",   // 정답
+        "8",
+        "9"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(x+\\dfrac{1}{x}=3\\) 일 때, " +
+                 "\\(\\bigl(x - \\dfrac{1}{x}\\bigr)^2\\) 의 값을 구하시오.",
+      choices: [
+        "3",
+        "4",
+        "5",   // 정답
+        "7"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(x+\\dfrac{1}{x}=3\\) 일 때, " +
+                 "\\(x - \\dfrac{1}{x}\\) 의 값을 구하시오.",
+      choices: [
+        "\\(\\pm\\sqrt{3}\\)",
+        "\\(\\pm\\sqrt{4}\\)",
+        "\\(\\pm\\sqrt{5}\\)",  // 정답
+        "\\(\\pm\\sqrt{6}\\)"
+      ],
+      correct: 2
+    },
+
+    // ---------------------------
+    // [58번: 소문제 3개]
+    // ---------------------------
+    {
+      statement: "\\(x-\\dfrac{1}{x}=5\\) 일 때, " +
+                 "\\(x^2 + \\dfrac{1}{x^2}\\) 의 값을 구하시오.",
+      choices: [
+        "25",
+        "26",
+        "27",   // 정답
+        "29"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(x-\\dfrac{1}{x}=5\\) 일 때, " +
+                 "\\(\\bigl(x+\\dfrac{1}{x}\\bigr)^2\\) 의 값을 구하시오.",
+      choices: [
+        "27",
+        "29",   // 정답
+        "31",
+        "33"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(x-\\dfrac{1}{x}=5\\) 일 때, " +
+                 "\\(x+\\dfrac{1}{x}\\) 의 값을 구하시오.",
+      choices: [
+        "\\(\\pm\\sqrt{25}\\)",
+        "\\(\\pm\\sqrt{26}\\)",
+        "\\(\\pm\\sqrt{29}\\)", // 정답
+        "\\(\\pm\\sqrt{30}\\)"
+      ],
+      correct: 2
+    },
+
+    // ---------------------------
+    // [68~73번 문제]
+    // ---------------------------
+    {
+      statement: "\\(a+\\dfrac{1}{a}=3\\) 일 때, " +
+                 "\\(\\bigl(a-\\dfrac{1}{a}\\bigr)^2\\) 의 값을 구하시오.",
+      choices: [
+        "4",
+        "5",  // 정답
+        "7",
+        "9"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+\\dfrac{1}{a}=2\\) 일 때, " +
+                 "\\(a^2 + \\dfrac{1}{a^2}\\) 의 값을 구하시오.",
+      choices: [
+        "2",  // 정답
+        "3",
+        "4",
+        "6"
+      ],
+      correct: 0
+    },
+    {
+      statement: "\\(a+\\dfrac{1}{a}=3\\) 일 때, " +
+                 "\\(a^3 + \\dfrac{1}{a^3}\\) 의 값을 구하시오.",
+      choices: [
+        "15",
+        "16",
+        "18", // 정답
+        "20"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+\\dfrac{1}{a}=-2\\) 일 때, " +
+                 "\\(a^3 + \\dfrac{1}{a^3}\\) 의 값을 구하시오.",
+      choices: [
+        "-4",
+        "-2",  // 정답
+        "0",
+        "2"
+      ],
+      correct: 1
+    },
+    {
+      statement: "\\(a+\\dfrac{1}{a}=\\dfrac{5}{2}\\) 일 때, " +
+                 "\\(a^3 + \\dfrac{1}{a^3}\\) 의 값을 구하시오.",
+      choices: [
+        "\\(\\dfrac{60}{8}\\)",
+        "\\(\\dfrac{63}{8}\\)",
+        "\\(\\dfrac{65}{8}\\)", // 정답
+        "\\(\\dfrac{75}{8}\\)"
+      ],
+      correct: 2
+    },
+    {
+      statement: "\\(a+\\dfrac{1}{a}=-5\\) 일 때, " +
+                 "\\(\\bigl(a-\\dfrac{1}{a}\\bigr)^2\\) 의 값을 구하시오.",
+      choices: [
+        "20",
+        "21", // 정답
+        "24",
+        "25"
+      ],
+      correct: 1
+    },
+
+    // ---------------------------
+    // [80~86번 문제]
+    // ---------------------------
+    {
+      statement: "다음을 계산하시오: \\(193 \\times 207\\)",
+      choices: [
+        "39800",
+        "39951", // 정답
+        "39960",
+        "40000"
+      ],
+      correct: 1
+    },
+    {
+      statement: "다음을 계산하시오: \\(197\\times203 + 202\\times202 - 199\\times199\\)",
+      choices: [
+        "41000",
+        "41194", // 정답
+        "41400",
+        "41900"
+      ],
+      correct: 1
+    },
+    {
+      statement: "다음을 계산하시오: \\(101 \\times (10000 - 100 + 1) - 99\\)",
+      choices: [
+        "999802",
+        "999902", // 정답
+        "999902", // (중복되지 않게 주의! -> 하나를 바꿔야 함)
+        "1000002"
+      ],
+      correct: 1
+    },
+    {
+      statement: "다음을 계산하시오: \\((2+1)(2^2+1)(2^4+1)\\)",
+      choices: [
+        "255", // 정답
+        "256",
+        "257",
+        "512"
+      ],
+      correct: 0
+    },
+    {
+      statement: "다음을 계산하시오: \\((2^2 -1)(2^2 +1)(2^4 +1)(2^8 +1)\\)",
+      choices: [
+        "\\(\\dfrac{2^{16}-1}{3}\\)", // 정답
+        "\\(\\dfrac{2^{16}+1}{3}\\)",
+        "\\(\\dfrac{2^{16}-1}{4}\\)",
+        "\\(\\dfrac{2^{16}+1}{4}\\)"
+      ],
+      correct: 0
+    },
+    {
+      statement: "다음을 계산하시오: \\((9+1)(9^2+1)(9^4+1)(9^8+1)\\)",
+      choices: [
+        "\\(\\dfrac{3^{32}-1}{4}\\)",
+        "\\(\\dfrac{3^{32}-1}{8}\\)",  // 정답
+        "\\(\\dfrac{3^{32}+1}{8}\\)",
+        "\\(\\dfrac{9^{16}-1}{4}\\)"
+      ],
+      correct: 1
+    },
+    {
+      statement: "다음을 계산하시오: \\((3+1)(3^2+1)(3^4+1)(3^8+1)\\)",
+      choices: [
+        "\\(\\dfrac{3^{16}+1}{2}\\)",
+        "\\(\\dfrac{3^{16}-1}{2}\\)",  // 정답
+        "\\(\\dfrac{3^{16}-1}{4}\\)",
+        "\\(\\dfrac{3^{16}+1}{4}\\)"
+      ],
+      correct: 1
+    }
+
+  ];
+
+  // 위에서 잠깐 중복된 보기(999902)가 있었으므로 하나를 살짝 수정
+  // (예: 세 번째 보기 -> "999912" 정도로 변경)
+  allQuestions[38].choices[2] = "999912"; // 중복 제거용 처리
+
+  // -----------------------------
+  // 난이도별 설정
+  // -----------------------------
+  let timeLimit = 0;       // 문제당 남은 에너지바 시간
+  let scoreUnit = 0;       // 문제당 점수
+  let unlimitedTime = false; // 난이도 "하"인 경우
+  let totalTime = 0;       // 전체 진행 시간 (초)
+  let totalTimer = null;
+
+  let currentEnergy = 1.0;       // 에너지바 (0~1)
+  let energyDecrement = 0;       // 한 틱마다 줄어드는 양
+  let energyInterval = null;
+
+  let life = 3;
+  let score = 0;
+  let usedIndices = []; // 이미 출제된 문제 인덱스
+  let currentQuestionIndex = -1; // 현재 문제 (allQuestions에서 뽑은 것)
+
+  let playerName = "";
+
+  // -----------------------------
+  // 화면 엘리먼트
+  // -----------------------------
+  const nameScreen = document.getElementById("nameScreen");
+  const difficultyScreen = document.getElementById("difficultyScreen");
+  const quizScreen = document.getElementById("quizScreen");
+  const gameOverScreen = document.getElementById("gameOverScreen");
+
+  const goDifficultyBtn = document.getElementById("goDifficulty");
+  const playerNameInput = document.getElementById("playerName");
+  const lifeCount = document.getElementById("lifeCount");
+  const scoreDisplay = document.getElementById("scoreDisplay");
+  const questionText = document.getElementById("questionText");
+  const optionsDiv = document.getElementById("options");
+  const explanationDiv = document.getElementById("explanation");
+  const energyFill = document.getElementById("energyFill");
+  const totalTimeSpan = document.getElementById("totalTime");
+  const finalScoreSpan = document.getElementById("finalScore");
+  const sendScoreBtn = document.getElementById("sendScoreBtn");
+
+  // -----------------------------
+  // 난이도 버튼 액션
+  // -----------------------------
+  const diffButtons = document.querySelectorAll(".difficulty-btn");
+  diffButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const level = btn.getAttribute("data-level");
+      if (level === "최상") {
+        timeLimit = 20;
+        scoreUnit = 20;
+      } else if (level === "상") {
+        timeLimit = 30;
+        scoreUnit = 15;
+      } else if (level === "중") {
+        timeLimit = 40;
+        scoreUnit = 13;
+      } else {
+        // 하
+        unlimitedTime = true;
+        scoreUnit = 10;
+      }
+      startGame();
+    });
+  });
+
+  // -----------------------------
+  // 초기화 & 시작
+  // -----------------------------
+  goDifficultyBtn.addEventListener("click", () => {
+    playerName = playerNameInput.value.trim();
+    if (!playerName) {
+      alert("이름을 입력해주세요!");
+      return;
+    }
+    // 이름 입력 화면 숨기고 난이도 화면 보여주기
+    nameScreen.classList.add("hidden");
+    difficultyScreen.classList.remove("hidden");
+  });
+
+  function startGame() {
+    difficultyScreen.classList.add("hidden");
+    quizScreen.classList.remove("hidden");
+
+    // 전체 시간 타이머
+    totalTimer = setInterval(() => {
+      totalTime++;
+      totalTimeSpan.textContent = totalTime;
+    }, 1000);
+
+    // 문제 섞기
+    shuffleArray(allQuestions);
+    usedIndices = [];
+    life = 3;
+    score = 0;
+    lifeCount.textContent = life;
+    scoreDisplay.textContent = score;
+
+    nextProblem();
+  }
+
+  // -----------------------------
+  // 문제 출제
+  // -----------------------------
+  function nextProblem() {
+    // 남아있는 문제가 없으면 게임 종료
+    if (usedIndices.length >= allQuestions.length) {
+      endGame();
+      return;
+    }
+
+    // 에너지바(시간) 재설정
+    currentEnergy = 1.0;
+    if (!unlimitedTime) {
+      energyDecrement = 1.0 / timeLimit / 10; 
+      // 대략 0.1초마다 energyDecrement 소진 -> timeLimit초 동안 1 소진
+    } else {
+      energyDecrement = 0; // 시간제한 없음
+    }
+    updateEnergyBar();
+
+    // 새로운 문제 인덱스 찾기
+    currentQuestionIndex = usedIndices.length;
+    // (위에서 shuffleArray로 전체 allQuestions가 이미 뒤섞인 상태이므로
+    //  usedIndices.length번째 문제 = random 순서로 된 allQuestions에서 가져오기)
+    usedIndices.push(currentQuestionIndex);
+
+    const qData = allQuestions[currentQuestionIndex];
+    questionText.innerHTML = qData.statement;
+    optionsDiv.innerHTML = "";
+    explanationDiv.textContent = "";
+
+    // 보기 섞기 위해 복제
+    const choiceArr = [...qData.choices];
+    shuffleArray(choiceArr);
+
+    choiceArr.forEach(choiceText => {
+      const btn = document.createElement("button");
+      btn.innerHTML = choiceText;
+      btn.onclick = () => checkAnswer(choiceText);
+      optionsDiv.appendChild(btn);
+    });
+
+    // 에너지바 타이머 시작
+    clearInterval(energyInterval);
+    if (!unlimitedTime) {
+      energyInterval = setInterval(energyTick, 100);
+    }
+
+    // 수식 렌더
+    setTimeout(renderMath, 50);
+  }
+
+  // -----------------------------
+  // 에너지바 감소
+  // -----------------------------
+  function energyTick() {
+    currentEnergy -= energyDecrement;
+    updateEnergyBar();
+    if (currentEnergy <= 0) {
+      currentEnergy = 0;
+      clearInterval(energyInterval);
+      // 시간 초과 -> 기회 1 감소, 정답 공개
+      life--;
+      lifeCount.textContent = life;
+      explanationDiv.innerHTML = "<span style='color:red;'>시간 초과! 기회가 1 감소했습니다.</span><br/>" +
+                                 "정답: " + getCorrectAnswerText(allQuestions[currentQuestionIndex]);
+      if (life <= 0) {
+        endGame();
+      } else {
+        // 다음 문제
+        setTimeout(() => {
+          nextProblem();
+        }, 2000);
+      }
+    }
+  }
+
+  function updateEnergyBar() {
+    energyFill.style.width = (currentEnergy * 100) + "%";
+  }
+
+  // -----------------------------
+  // 정답 확인
+  // -----------------------------
+  function checkAnswer(selectedText) {
+    clearInterval(energyInterval);
+
+    const qData = allQuestions[currentQuestionIndex];
+    const correctText = qData.choices[qData.correct];
+
+    if (selectedText === correctText) {
+      // 정답
+      score += scoreUnit;
+      scoreDisplay.textContent = score;
+      explanationDiv.innerHTML = "<span style='color:blue;'>정답입니다!</span>";
+    } else {
+      // 오답
+      life--;
+      lifeCount.textContent = life;
+      explanationDiv.innerHTML = "<span style='color:red;'>틀렸습니다!</span> 정답: " + getCorrectAnswerText(qData);
+      if (life <= 0) {
+        // 3번 틀리면 게임 종료
+        endGame();
+        return;
+      }
+    }
+
+    // 잠시 후 다음 문제
+    setTimeout(() => {
+      nextProblem();
+    }, 2000);
+  }
+
+  function getCorrectAnswerText(qData) {
+    return qData.choices[qData.correct];
+  }
+
+  // -----------------------------
+  // 게임 종료
+  // -----------------------------
+  function endGame() {
+    clearInterval(totalTimer);
+    clearInterval(energyInterval);
+
+    quizScreen.classList.add("hidden");
+    gameOverScreen.classList.remove("hidden");
+    finalScoreSpan.textContent = score;
+  }
+
+  // -----------------------------
+  // 배열 섞기 (보기/문제용)
+  // -----------------------------
+  function shuffleArray(arr) {
+    for (let i=arr.length-1; i>0; i--) {
+      const j = Math.floor(Math.random() * (i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  // -----------------------------
+  // 점수 전송
+  // -----------------------------
+  sendScoreBtn.addEventListener("click", () => {
+    saveData("곱셈공식의 변형", playerName, score, totalTime);
+  });
+
+  // -----------------------------
+  // 주어진 saveData 함수
+  // -----------------------------
+  async function saveData(game, name, score, elapsedTime) {
+    const FUNCTION_URL = "https://us-central1-record-f420d.cloudfunctions.net/report";
+    const requestData = {
+      game,
+      name,
+      score: parseInt(score, 10),
+      elapsedTime: parseInt(elapsedTime, 10)
+    };
+
+    try {
+      const response = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      const responseData = await response.json();
+      const responseDiv = document.getElementById('response');
+
+      if (response.ok) {
+        responseDiv.innerText = `성공: ${JSON.stringify(responseData, null, 2)}`;
+      } else {
+        responseDiv.innerText = `오류: ${JSON.stringify(responseData, null, 2)}`;
+      }
+    } catch (error) {
+      console.error('요청 실패:', error);
+      document.getElementById('response').innerText = `네트워크 오류: ${error.message}`;
+    }
+  }
+</script>
+</body>
+</html>
